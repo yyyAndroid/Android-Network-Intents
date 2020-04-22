@@ -14,14 +14,15 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
+import com.androidzeitgeist.ani.afl.ByteUtil;
 import com.androidzeitgeist.ani.discovery.Discovery;
 import com.androidzeitgeist.ani.discovery.DiscoveryException;
 import com.androidzeitgeist.ani.discovery.DiscoveryListener;
 import com.androidzeitgeist.ani.transmitter.Transmitter;
 import com.androidzeitgeist.ani.transmitter.TransmitterException;
 
-public class ChatActivity extends Activity implements DiscoveryListener, OnEditorActionListener, OnClickListener  {
-    private static final String EXTRA_MESSAGE = "message";
+public class ChatActivity extends Activity implements DiscoveryListener, OnEditorActionListener, OnClickListener {
+    private static final String EXTRA_MESSAGE = "upd_message";
 
     private TextView chatView;
     private EditText inputView;
@@ -38,8 +39,13 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
 
         setContentView(R.layout.activity_chat);
 
+        //接收
         discovery = new Discovery();
+
+        //接收监听
         discovery.setDisoveryListener(this);
+
+        //发送
         transmitter = new Transmitter();
 
         chatView = (TextView) findViewById(R.id.chat);
@@ -56,7 +62,9 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
         super.onResume();
 
         try {
+            //开始接收
             discovery.enable();
+
             discoveryStarted = true;
         } catch (DiscoveryException exception) {
             appendChatMessage("* (!) Could not start discovery: " + exception.getMessage());
@@ -85,30 +93,43 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
         appendChatMessage("<" + sender + "> " + message);
     }
 
+    /**
+     * 接收对象异常
+     *
+     * @param exception Actual exception that occured in the background thread
+     */
     @Override
     public void onDiscoveryError(Exception exception) {
         appendChatMessage("* (!) Discovery error: " + exception.getMessage());
     }
 
+    /**
+     * 接收对象开始
+     */
     @Override
     public void onDiscoveryStarted() {
         appendChatMessage("* (>) Discovery started");
     }
 
+    /**
+     * 接收对象停止
+     */
     @Override
     public void onDiscoveryStopped() {
         appendChatMessage("* (<) Discovery stopped");
     }
 
+    /**
+     * 接收到消息
+     *
+     * @param address The IP address of the sender of the {@link Intent}.
+     * @param intent  The received {@link Intent}.
+     */
     @Override
-    public void onIntentDiscovered(InetAddress address, Intent intent) {
-        if (!intent.hasExtra(EXTRA_MESSAGE)) {
-            appendChatMessage("* (!) Received Intent without message");
-            return;
-        }
+    public void onIntentDiscovered(InetAddress address, Intent intent, byte[] dataIntent) {
 
-        String message = intent.getStringExtra(EXTRA_MESSAGE);
-        String sender  = address.getHostName();
+        String message = ByteUtil.bytes2HexString(dataIntent);
+        String sender = address.getHostName();
 
         appendChatMessageFromSender(sender, message);
     }
@@ -143,14 +164,24 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
         transmitIntentOnBackgroundThread(intent);
     }
 
+    /**
+     * 异步发送
+     *
+     * @param intent
+     */
     private void transmitIntentOnBackgroundThread(final Intent intent) {
         new Thread() {
             public void run() {
-                transmitIntent(intent); 
+                transmitIntent(intent);
             }
         }.start();
     }
 
+    /**
+     * 同步发送
+     *
+     * @param intent
+     */
     private void transmitIntent(final Intent intent) {
         try {
             transmitter.transmit(intent);

@@ -22,5 +22,5 @@ package com.androidzeitgeist.ani.internal;
 public class AndroidNetworkIntents {
     public static final String DEFAULT_MULTICAST_ADDRESS = "225.4.5.6";
 
-    public static final int DEFAULT_PORT = 5775;
+    public static final int DEFAULT_PORT = 57698;
 }

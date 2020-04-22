@@ -41,8 +41,8 @@ public class Transmitter {
      */
     public Transmitter() {
         this(
-            AndroidNetworkIntents.DEFAULT_MULTICAST_ADDRESS,
-            AndroidNetworkIntents.DEFAULT_PORT
+                AndroidNetworkIntents.DEFAULT_MULTICAST_ADDRESS,
+                AndroidNetworkIntents.DEFAULT_PORT
         );
     }
 
@@ -54,8 +54,8 @@ public class Transmitter {
      */
     public Transmitter(int port) {
         this(
-            AndroidNetworkIntents.DEFAULT_MULTICAST_ADDRESS,
-            port
+                AndroidNetworkIntents.DEFAULT_MULTICAST_ADDRESS,
+                port
         );
     }
 
@@ -64,7 +64,7 @@ public class Transmitter {
      * the given multicast address and port.
      *
      * @param multicastAddress The destination multicast address, e.g. 225.4.5.6.
-     * @param port The destination network port.
+     * @param port             The destination network port.
      */
     public Transmitter(String multicastAddress, int port) {
         this.multicastAddress = multicastAddress;
@@ -97,6 +97,25 @@ public class Transmitter {
         }
     }
 
+    private void transmit(byte[] intent) throws TransmitterException {
+        MulticastSocket socket = null;
+        try {
+            socket = createSocket();
+            transmit(socket, intent);
+        } catch (UnknownHostException exception) {
+            throw new TransmitterException("Unknown host", exception);
+        } catch (SocketException exception) {
+            throw new TransmitterException("Can't create DatagramSocket", exception);
+        } catch (IOException exception) {
+            throw new TransmitterException("IOException during sending intent", exception);
+        } finally {
+            if (socket != null) {
+                socket.close();
+            }
+        }
+    }
+
+
     protected MulticastSocket createSocket() throws IOException {
         return new MulticastSocket();
     }
@@ -110,10 +129,22 @@ public class Transmitter {
         byte[] data = intent.toUri(0).getBytes();
 
         DatagramPacket packet = new DatagramPacket(
-            data,
-            data.length,
-            InetAddress.getByName(multicastAddress),
-            port
+                data,
+                data.length,
+                InetAddress.getByName(multicastAddress),
+                port
+        );
+
+        socket.send(packet);
+    }
+
+    private void transmit(MulticastSocket socket, byte[] intent) throws IOException {
+
+        DatagramPacket packet = new DatagramPacket(
+                intent,
+                intent.length,
+                InetAddress.getByName(multicastAddress),
+                port
         );
 
         socket.send(packet);

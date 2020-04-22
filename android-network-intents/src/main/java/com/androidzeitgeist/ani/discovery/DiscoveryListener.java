@@ -50,5 +50,5 @@ public interface DiscoveryListener {
      * @param address The IP address of the sender of the {@link Intent}.
      * @param intent The received {@link Intent}.
      */
-    public void onIntentDiscovered(InetAddress address, Intent intent);
+    public void onIntentDiscovered(InetAddress address, Intent intent, byte[] dataIntent);
 }

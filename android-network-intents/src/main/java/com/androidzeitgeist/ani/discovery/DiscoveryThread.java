@@ -32,7 +32,7 @@ import android.util.Log;
  */
 class DiscoveryThread extends Thread {
     private static final String TAG = "ANI/DiscoveryThread";
-    private static final int MAXIMUM_PACKET_BYTES = 102400;
+    private static final int MAXIMUM_PACKET_BYTES = 1024;
 
     private String multicastAddress;
     private int port;
@@ -44,7 +44,7 @@ class DiscoveryThread extends Thread {
     /**
      * Create a new background thread that handles incoming Intents on the given
      * multicast address and port.
-     *
+     * <p>
      * Do not instantiate this class yourself. Use the {@link Discovery} class
      * instead.
      *
@@ -66,7 +66,7 @@ class DiscoveryThread extends Thread {
         try {
             socket = createSocket();
             receiveIntents();
-        } catch(IOException exception) {
+        } catch (IOException exception) {
             if (running) {
                 listener.onDiscoveryError(exception);
             }
@@ -101,7 +101,7 @@ class DiscoveryThread extends Thread {
     protected void receiveIntents() throws IOException {
         while (running) {
             DatagramPacket packet = new DatagramPacket(
-                new byte[MAXIMUM_PACKET_BYTES], MAXIMUM_PACKET_BYTES
+                    new byte[MAXIMUM_PACKET_BYTES], MAXIMUM_PACKET_BYTES
             );
 
             try {
@@ -110,11 +110,12 @@ class DiscoveryThread extends Thread {
                 byte[] data = packet.getData();
                 int length = packet.getLength();
 
-                String intentUri = new String(data, 0, length);
-                Intent intent = Intent.parseUri(intentUri, 0);
+                byte[] result = new byte[length];
 
-                listener.onIntentDiscovered(packet.getAddress(), intent);
-            } catch (URISyntaxException exception) {
+                System.arraycopy(data, 0, result, 0, length);
+
+                listener.onIntentDiscovered(packet.getAddress(), null, result);
+            } catch (Exception exception) {
                 Log.v(TAG, "Received UDP packet that could not be parsed as Intent");
             }
         }
