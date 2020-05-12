@@ -18,13 +18,16 @@ package com.androidzeitgeist.ani.transmitter;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
 import android.content.Intent;
 
+import com.androidzeitgeist.ani.afl.AflSocketManager;
 import com.androidzeitgeist.ani.discovery.Discovery;
 import com.androidzeitgeist.ani.internal.AndroidNetworkIntents;
 
@@ -39,10 +42,10 @@ public class Transmitter {
      * Creates a new {@link Transmitter} instance that will sent {@link Intent}s to
      * the default multicast address and port.
      */
-    public Transmitter() {
+    private Transmitter() {
         this(
-                AndroidNetworkIntents.DEFAULT_MULTICAST_ADDRESS,
-                AndroidNetworkIntents.DEFAULT_PORT
+                AndroidNetworkIntents.TRANSMITTER_ADDRESS,
+                AndroidNetworkIntents.TRANSMITTER_PORT
         );
     }
 
@@ -52,9 +55,9 @@ public class Transmitter {
      *
      * @param port The destination network port.
      */
-    public Transmitter(int port) {
+    private Transmitter(int port) {
         this(
-                AndroidNetworkIntents.DEFAULT_MULTICAST_ADDRESS,
+                AndroidNetworkIntents.TRANSMITTER_ADDRESS,
                 port
         );
     }
@@ -79,7 +82,7 @@ public class Transmitter {
      * @throws TransmitterException if intent could not be transmitted.
      */
     public void transmit(Intent intent) throws TransmitterException {
-        MulticastSocket socket = null;
+        DatagramSocket socket = null;
 
         try {
             socket = createSocket();
@@ -97,10 +100,14 @@ public class Transmitter {
         }
     }
 
-    private void transmit(byte[] intent) throws TransmitterException {
-        MulticastSocket socket = null;
+    public void transmit(byte[] intent) throws TransmitterException {
+        DatagramSocket socket = AflSocketManager.getInstance().getSocket();
         try {
-            socket = createSocket();
+            if (socket == null) {
+//                socket = createSocket();
+//                socket.setReuseAddress(true);
+//                socket.bind(new InetSocketAddress(AndroidNetworkIntents.TRANSMITTER_NATIVE_PORT));
+            }
             transmit(socket, intent);
         } catch (UnknownHostException exception) {
             throw new TransmitterException("Unknown host", exception);
@@ -109,15 +116,17 @@ public class Transmitter {
         } catch (IOException exception) {
             throw new TransmitterException("IOException during sending intent", exception);
         } finally {
-            if (socket != null) {
-                socket.close();
-            }
+//            if (socket != null) {
+//                socket.close();
+//            }
         }
     }
 
 
-    protected MulticastSocket createSocket() throws IOException {
-        return new MulticastSocket();
+    protected DatagramSocket createSocket() throws IOException {
+
+        DatagramSocket multicastSocket = new MulticastSocket();
+        return multicastSocket;
     }
 
     /**
@@ -125,7 +134,7 @@ public class Transmitter {
      * it as {@link DatagramPacket}. Used to separate the implementation from the
      * error handling code.
      */
-    private void transmit(MulticastSocket socket, Intent intent) throws IOException {
+    private void transmit(DatagramSocket socket, Intent intent) throws IOException {
         byte[] data = intent.toUri(0).getBytes();
 
         DatagramPacket packet = new DatagramPacket(
@@ -138,7 +147,7 @@ public class Transmitter {
         socket.send(packet);
     }
 
-    private void transmit(MulticastSocket socket, byte[] intent) throws IOException {
+    private void transmit(DatagramSocket socket, byte[] intent) throws IOException {
 
         DatagramPacket packet = new DatagramPacket(
                 intent,

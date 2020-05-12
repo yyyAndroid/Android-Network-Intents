@@ -24,8 +24,13 @@ import com.androidzeitgeist.ani.internal.AndroidNetworkIntents;
  * Discovery class for receiving {@link Intent}s from the network.
  */
 public class Discovery {
+
+    public static final int SOCKET_GENRE_MULTICAST = 0;
+    public static final int SOCKET_GENRE_NORMAL = 1;
+
     private String multicastAddress;
     private int port;
+    private int mSocketGenre = SOCKET_GENRE_NORMAL;
 
     private DiscoveryListener listener;
     private DiscoveryThread thread;
@@ -34,11 +39,16 @@ public class Discovery {
      * Create a new {@link Discovery} instance that will listen to the default
      * multicast address and port for incoming {@link Intent}s.
      */
-    public Discovery() {
+    private Discovery() {
         this(
-            AndroidNetworkIntents.DEFAULT_MULTICAST_ADDRESS,
-            AndroidNetworkIntents.DEFAULT_PORT
+                AndroidNetworkIntents.DISCOVERY_ADDRESS,
+                AndroidNetworkIntents.DISCOVERY_PORT,
+                SOCKET_GENRE_MULTICAST
         );
+    }
+
+    public void setSocketGenre(int socketGenre) {
+        this.mSocketGenre = socketGenre;
     }
 
     /**
@@ -47,23 +57,30 @@ public class Discovery {
      *
      * @param port The network port to listen to.
      */
-    public Discovery(int port) {
+    private Discovery(int port) {
         this(
-            AndroidNetworkIntents.DEFAULT_MULTICAST_ADDRESS,
-            port
+                AndroidNetworkIntents.DISCOVERY_ADDRESS,
+                port
         );
     }
+
 
     /**
      * Create a new {@link Discovery} instance that will listen to the given
      * multicast address and port for incoming {@link Intent}s.
      *
      * @param multicastAddress The multicast address to listen to, e.g. 225.4.5.6.
-     * @param port The port to listen to.
+     * @param port             The port to listen to.
      */
     public Discovery(String multicastAddress, int port) {
         this.multicastAddress = multicastAddress;
         this.port = port;
+    }
+
+    public Discovery(String multicastAddress, int port, int socketGenre) {
+        this.multicastAddress = multicastAddress;
+        this.port = port;
+        this.mSocketGenre = socketGenre;
     }
 
     /**
@@ -80,7 +97,7 @@ public class Discovery {
     /**
      * Enables the {@link Discovery} so that it will monitor the network for
      * {@link Intent}s and notify the given {@link DiscoveryListener} instance.
-     *
+     * <p>
      * This is a shortcut for:
      * <code>
      * discovery.setDiscoveryListener(listener);
@@ -100,9 +117,9 @@ public class Discovery {
      * Enables the {@link Discovery} so that it will monitor the network for
      * {@link Intent}s and notify the set {@link DiscoveryListener} instance.
      *
-     * @throws DiscoveryException if discovery could not be enabled.
+     * @throws DiscoveryException    if discovery could not be enabled.
      * @throws IllegalStateException if no listener has been set
-     * @throws IllegalAccessError if this {@link Discovery} is already enabled
+     * @throws IllegalAccessError    if this {@link Discovery} is already enabled
      */
     public void enable() throws DiscoveryException {
         if (listener == null) {
@@ -118,7 +135,7 @@ public class Discovery {
     }
 
     protected DiscoveryThread createDiscoveryThread() {
-        return new DiscoveryThread(multicastAddress, port, listener);
+        return new DiscoveryThread(mSocketGenre, multicastAddress, port, listener);
     }
 
     /**

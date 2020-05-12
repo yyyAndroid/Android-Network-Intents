@@ -1,5 +1,6 @@
 package com.androidzeitgeist.ani.sample.intentchat;
 
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 
 import android.app.Activity;
@@ -18,8 +19,11 @@ import com.androidzeitgeist.ani.afl.ByteUtil;
 import com.androidzeitgeist.ani.discovery.Discovery;
 import com.androidzeitgeist.ani.discovery.DiscoveryException;
 import com.androidzeitgeist.ani.discovery.DiscoveryListener;
+import com.androidzeitgeist.ani.internal.AndroidNetworkIntents;
 import com.androidzeitgeist.ani.transmitter.Transmitter;
 import com.androidzeitgeist.ani.transmitter.TransmitterException;
+
+import static com.androidzeitgeist.ani.discovery.Discovery.SOCKET_GENRE_NORMAL;
 
 public class ChatActivity extends Activity implements DiscoveryListener, OnEditorActionListener, OnClickListener {
     private static final String EXTRA_MESSAGE = "upd_message";
@@ -40,13 +44,13 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
         setContentView(R.layout.activity_chat);
 
         //接收
-        discovery = new Discovery();
+        discovery = new Discovery(AndroidNetworkIntents.DISCOVERY_ADDRESS, AndroidNetworkIntents.DISCOVERY_PORT, SOCKET_GENRE_NORMAL);
 
         //接收监听
         discovery.setDisoveryListener(this);
 
         //发送
-        transmitter = new Transmitter();
+        transmitter = new Transmitter(AndroidNetworkIntents.TRANSMITTER_ADDRESS, AndroidNetworkIntents.TRANSMITTER_PORT);
 
         chatView = (TextView) findViewById(R.id.chat);
 
@@ -128,7 +132,12 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
     @Override
     public void onIntentDiscovered(InetAddress address, Intent intent, byte[] dataIntent) {
 
-        String message = ByteUtil.bytes2HexString(dataIntent);
+        String message = null;
+        try {
+            message = new String(dataIntent, "utf-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
         String sender = address.getHostName();
 
         appendChatMessageFromSender(sender, message);
@@ -158,8 +167,12 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
 
         inputView.setText("");
 
-        Intent intent = new Intent();
-        intent.putExtra(EXTRA_MESSAGE, message);
+        byte[] intent = new byte[0];
+        try {
+            intent = message.getBytes("utf-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
 
         transmitIntentOnBackgroundThread(intent);
     }
@@ -169,7 +182,7 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
      *
      * @param intent
      */
-    private void transmitIntentOnBackgroundThread(final Intent intent) {
+    private void transmitIntentOnBackgroundThread(final byte[] intent) {
         new Thread() {
             public void run() {
                 transmitIntent(intent);
@@ -182,7 +195,7 @@ public class ChatActivity extends Activity implements DiscoveryListener, OnEdito
      *
      * @param intent
      */
-    private void transmitIntent(final Intent intent) {
+    private void transmitIntent(final byte[] intent) {
         try {
             transmitter.transmit(intent);
         } catch (TransmitterException exception) {

@@ -20,7 +20,22 @@ package com.androidzeitgeist.ani.internal;
  * Internal class for implementation specific constants.
  */
 public class AndroidNetworkIntents {
-    public static final String DEFAULT_MULTICAST_ADDRESS = "225.4.5.6";
+    //-----组播------
+    public static final String DISCOVERY_ADDRESS = "10.200.12.64";//监听的组播地址
 
-    public static final int DEFAULT_PORT = 57698;
+    //监听消息端口
+    public static final int DISCOVERY_PORT = 8888;
+
+//    public static final int TRANSMITTER_NATIVE_PORT = 8888;
+
+    //----------------------
+
+    //-----发送本地端口------
+
+    //发送消息目标端口
+    public static final int TRANSMITTER_PORT = 8888;
+
+    //发送消息IP
+    public static final String TRANSMITTER_ADDRESS = "10.200.12.64";
+
 }

@@ -18,6 +18,7 @@ package com.androidzeitgeist.ani.discovery;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.URISyntaxException;
@@ -26,17 +27,24 @@ import java.net.UnknownHostException;
 import android.content.Intent;
 import android.util.Log;
 
+import com.androidzeitgeist.ani.afl.AflSocketManager;
+
+import static com.androidzeitgeist.ani.discovery.Discovery.SOCKET_GENRE_MULTICAST;
+import static com.androidzeitgeist.ani.discovery.Discovery.SOCKET_GENRE_NORMAL;
+
 /**
  * Internal class for handling the network connection of the {@link Discovery} class
  * on a background thread.
  */
 class DiscoveryThread extends Thread {
     private static final String TAG = "ANI/DiscoveryThread";
-    private static final int MAXIMUM_PACKET_BYTES = 1024;
+    private static final int MAXIMUM_PACKET_BYTES = 1024 * 1024;
+
+    public static int mSocketGenre = SOCKET_GENRE_MULTICAST;
 
     private String multicastAddress;
     private int port;
-    private MulticastSocket socket;
+    private DatagramSocket socket;
     private DiscoveryListener listener;
 
     private volatile boolean running;
@@ -52,7 +60,8 @@ class DiscoveryThread extends Thread {
      * @param port
      * @param listener
      */
-    /* package-private */ DiscoveryThread(String multicastAddress, int port, DiscoveryListener listener) {
+    /* package-private */ DiscoveryThread(int type, String multicastAddress, int port, DiscoveryListener listener) {
+        this.mSocketGenre = type;
         this.multicastAddress = multicastAddress;
         this.port = port;
         this.listener = listener;
@@ -77,17 +86,28 @@ class DiscoveryThread extends Thread {
         listener.onDiscoveryStopped();
     }
 
-    protected MulticastSocket createSocket() throws UnknownHostException, IOException {
+    protected DatagramSocket createSocket() throws UnknownHostException, IOException {
         InetAddress address = InetAddress.getByName(multicastAddress);
+        if (AflSocketManager.getInstance().getSocket() == null){
+            switch (mSocketGenre){
+                case SOCKET_GENRE_NORMAL:
+                    socket = new DatagramSocket(port);
+                    break;
+                case SOCKET_GENRE_MULTICAST:
+                    socket = new MulticastSocket(port);
+                    MulticastSocket multicastSocket = (MulticastSocket) socket;
+                    multicastSocket.joinGroup(address);
 
-        MulticastSocket socket = new MulticastSocket(port);
-        socket.joinGroup(address);
+            }
+            AflSocketManager.getInstance().setSocket(socket);
+        }
 
         return socket;
     }
 
     private void closeSocket() {
         if (socket != null) {
+            AflSocketManager.getInstance().setSocket(null);
             socket.close();
         }
     }
